@@ -2,7 +2,10 @@ module github.com/zinscky/shared
 
 go 1.22
 
-require github.com/hashicorp/go-plugin v1.6.2
+require (
+	github.com/hashicorp/go-plugin v1.6.2
+	github.com/zinscky/log v1.1.0
+)
 
 require (
 	github.com/fatih/color v1.7.0 // indirect

@@ -8,29 +8,39 @@ import (
 
 // Destination is the interface that we're exposing as a plugin.
 type Destination interface {
-	Setup(args Args) error
-	Execute(args Args) error
-	Teardown(args Args) error
+	Execute(args Args) (Args, error)
+	Setup(args Args) (Args, error)
+	Teardown(args Args) (Args, error)
 }
 
 // Here is an implementation that talks over RPC
 type DestinationRPC struct{ client *rpc.Client }
 
-func (d *DestinationRPC) Execute(args Args) error {
-	var resp string
-	return d.client.Call("Plugin.Execute", args, &resp)
+func (g *DestinationRPC) Execute(args Args) (Args, error) {
+	resp := Resp{}
+	err := g.client.Call("Plugin.Execute", args, &resp)
+	if err != nil {
+		return resp.Args, err
+	}
+	return resp.Args, nil
 }
 
-func (d *DestinationRPC) Setup(args Args) error {
-	var resp string
-	err := d.client.Call("Plugin.Setup", args, &resp)
-	return err
+func (g *DestinationRPC) Setup(args Args) (Args, error) {
+	resp := Resp{}
+	err := g.client.Call("Plugin.Setup", args, &resp)
+	if err != nil {
+		return resp.Args, err
+	}
+	return resp.Args, nil
 }
 
-func (d *DestinationRPC) Teardown(args Args) error {
-	var resp string
-	err := d.client.Call("Plugin.Teardown", args, &resp)
-	return err
+func (g *DestinationRPC) TearDown(args Args) (Args, error) {
+	resp := Resp{}
+	err := g.client.Call("Plugin.Teardown", args, &resp)
+	if err != nil {
+		return resp.Args, err
+	}
+	return resp.Args, nil
 }
 
 // Here is the RPC server that GreeterRPC talks to, conforming to
@@ -40,16 +50,22 @@ type DestinationRPCServer struct {
 	Impl Destination
 }
 
-func (s *DestinationRPCServer) Execute(args Args, resp *string) error {
-	return s.Impl.Execute(args)
+func (s *DestinationRPCServer) Execute(args Args, resp *Resp) error {
+	var err error
+	resp.Args, err = s.Impl.Execute(args)
+	return err
 }
 
-func (s *DestinationRPCServer) Setup(args Args, resp *string) error {
-	return s.Impl.Setup(args)
+func (s *DestinationRPCServer) Setup(args Args, resp *Resp) error {
+	var err error
+	resp.Args, err = s.Impl.Setup(args)
+	return err
 }
 
-func (s *DestinationRPCServer) Teardown(args Args, resp *string) error {
-	return s.Impl.Teardown(args)
+func (s *DestinationRPCServer) TearDown(args Args, resp *Resp) error {
+	var err error
+	resp.Args, err = s.Impl.Teardown(args)
+	return err
 }
 
 // This is the implementation of plugin.Plugin so we can serve/consume this

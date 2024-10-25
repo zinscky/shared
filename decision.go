@@ -4,29 +4,17 @@ import (
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
-	"github.com/zinscky/log"
 )
 
-type Args struct {
-	Event        string
-	Config       map[string]string
-	Log          log.Logger
-	DecisionResp bool
-}
-
-type Resp struct {
-	Args Args
-}
-
-// Transformation is the interface that we're exposing as a plugin.
-type Transformation interface {
+// Decision is the interface that we're exposing as a plugin.
+type Decision interface {
 	Execute(args Args) (Args, error)
 }
 
 // Here is an implementation that talks over RPC
-type TransformationRPC struct{ client *rpc.Client }
+type DecisionRPC struct{ client *rpc.Client }
 
-func (g *TransformationRPC) Execute(args Args) (Args, error) {
+func (g *DecisionRPC) Execute(args Args) (Args, error) {
 	resp := Resp{}
 	err := g.client.Call("Plugin.Execute", args, &resp)
 	if err != nil {
@@ -41,12 +29,12 @@ func (g *TransformationRPC) Execute(args Args) (Args, error) {
 
 // Here is the RPC server that GreeterRPC talks to, conforming to
 // the requirements of net/rpc
-type TransformationRPCServer struct {
+type DecisionRPCServer struct {
 	// This is the real implementation
-	Impl Transformation
+	Impl Decision
 }
 
-func (s *TransformationRPCServer) Execute(args Args, resp *Resp) error {
+func (s *DecisionRPCServer) Execute(args Args, resp *Resp) error {
 	var err error
 	resp.Args, err = s.Impl.Execute(args)
 	return err
@@ -62,15 +50,15 @@ func (s *TransformationRPCServer) Execute(args Args, resp *Resp) error {
 //
 // Ignore MuxBroker. That is used to create more multiplexed streams on our
 // plugin connection and is a more advanced use case.
-type TransformationPlugin struct {
+type DecisionPlugin struct {
 	// Impl Injection
-	Impl Transformation
+	Impl Decision
 }
 
-func (p *TransformationPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	return &TransformationRPCServer{Impl: p.Impl}, nil
+func (p *DecisionPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
+	return &DecisionRPCServer{Impl: p.Impl}, nil
 }
 
-func (TransformationPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
-	return &TransformationRPC{client: c}, nil
+func (DecisionPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
+	return &DecisionRPC{client: c}, nil
 }
