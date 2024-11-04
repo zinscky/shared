@@ -9,8 +9,6 @@ import (
 // Destination is the interface that we're exposing as a plugin.
 type Destination interface {
 	Execute(args Args) (Args, error)
-	Setup(args Args) (Args, error)
-	Teardown(args Args) (Args, error)
 }
 
 // Here is an implementation that talks over RPC
@@ -19,24 +17,6 @@ type DestinationRPC struct{ client *rpc.Client }
 func (g *DestinationRPC) Execute(args Args) (Args, error) {
 	resp := Resp{}
 	err := g.client.Call("Plugin.Execute", args, &resp)
-	if err != nil {
-		return resp.Args, err
-	}
-	return resp.Args, nil
-}
-
-func (g *DestinationRPC) Setup(args Args) (Args, error) {
-	resp := Resp{}
-	err := g.client.Call("Plugin.Setup", args, &resp)
-	if err != nil {
-		return resp.Args, err
-	}
-	return resp.Args, nil
-}
-
-func (g *DestinationRPC) TearDown(args Args) (Args, error) {
-	resp := Resp{}
-	err := g.client.Call("Plugin.Teardown", args, &resp)
 	if err != nil {
 		return resp.Args, err
 	}
@@ -53,18 +33,6 @@ type DestinationRPCServer struct {
 func (s *DestinationRPCServer) Execute(args Args, resp *Resp) error {
 	var err error
 	resp.Args, err = s.Impl.Execute(args)
-	return err
-}
-
-func (s *DestinationRPCServer) Setup(args Args, resp *Resp) error {
-	var err error
-	resp.Args, err = s.Impl.Setup(args)
-	return err
-}
-
-func (s *DestinationRPCServer) TearDown(args Args, resp *Resp) error {
-	var err error
-	resp.Args, err = s.Impl.Teardown(args)
 	return err
 }
 
