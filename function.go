@@ -15,6 +15,7 @@ type Function interface {
 
 type FunctionArgs struct {
 	Req        *http.Request
+	Config     map[string]string
 	Log        *log.Logger
 	Resp       any
 	Headers    map[string]string
