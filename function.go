@@ -10,7 +10,7 @@ import (
 
 // Function is the interface that we're exposing as a plugin.
 type Function interface {
-	Execute(args FunctionArgs) (FunctionArgs, error)
+	Execute(args FunctionArgs) FunctionArgs
 }
 
 type FunctionArgs struct {
@@ -28,17 +28,17 @@ type FunctionResp struct {
 // Here is an implementation that talks over RPC
 type FunctionRPC struct{ client *rpc.Client }
 
-func (g *FunctionRPC) Execute(args FunctionArgs) (FunctionArgs, error) {
+func (g *FunctionRPC) Execute(args FunctionArgs) FunctionArgs {
 	resp := FunctionResp{}
 	err := g.client.Call("Plugin.Execute", args, &resp)
 	if err != nil {
 		// You usually want your interfaces to return errors. If they don't,
 		// there isn't much other choice here.
 		// panic(err)
-		return resp.Args, err
+		return resp.Args
 	}
 
-	return resp.Args, nil
+	return resp.Args
 }
 
 // Here is the RPC server that GreeterRPC talks to, conforming to
@@ -50,7 +50,7 @@ type FunctionRPCServer struct {
 
 func (s *FunctionRPCServer) Execute(args FunctionArgs, resp *FunctionResp) error {
 	var err error
-	resp.Args, err = s.Impl.Execute(args)
+	resp.Args = s.Impl.Execute(args)
 	return err
 }
 
