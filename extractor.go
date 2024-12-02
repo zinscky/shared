@@ -1,57 +1,53 @@
 package shared
 
 import (
-	"net/http"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/zinscky/log"
 )
 
-// Function is the interface that we're exposing as a plugin.
-type Function interface {
-	Execute(args FunctionArgs) FunctionArgs
+type ExtractorArgs struct {
+	Data   []interface{}
+	Config map[string]string
+	Log    log.Logger
 }
 
-type FunctionArgs struct {
-	Req        *http.Request
-	Config     map[string]string
-	Log        *log.Logger
-	Resp       any
-	Headers    map[string]string
-	StatusCode int
+type ExtractorResp struct {
+	Args ExtractorArgs
 }
 
-type FunctionResp struct {
-	Args FunctionArgs
+// Transformation is the interface that we're exposing as a plugin.
+type Extractor interface {
+	Execute(args ExtractorArgs) (ExtractorArgs, error)
 }
 
 // Here is an implementation that talks over RPC
-type FunctionRPC struct{ client *rpc.Client }
+type ExtractorRPC struct{ client *rpc.Client }
 
-func (g *FunctionRPC) Execute(args FunctionArgs) FunctionArgs {
-	resp := FunctionResp{}
+func (g *ExtractorRPC) Execute(args ExtractorArgs) (ExtractorArgs, error) {
+	resp := ExtractorResp{}
 	err := g.client.Call("Plugin.Execute", args, &resp)
 	if err != nil {
 		// You usually want your interfaces to return errors. If they don't,
 		// there isn't much other choice here.
 		// panic(err)
-		return resp.Args
+		return resp.Args, err
 	}
 
-	return resp.Args
+	return resp.Args, nil
 }
 
 // Here is the RPC server that GreeterRPC talks to, conforming to
 // the requirements of net/rpc
-type FunctionRPCServer struct {
+type ExtractorRPCServer struct {
 	// This is the real implementation
-	Impl Function
+	Impl Extractor
 }
 
-func (s *FunctionRPCServer) Execute(args FunctionArgs, resp *FunctionResp) error {
+func (s *ExtractorRPCServer) Execute(args ExtractorArgs, resp *ExtractorResp) error {
 	var err error
-	resp.Args = s.Impl.Execute(args)
+	resp.Args, err = s.Impl.Execute(args)
 	return err
 }
 
@@ -65,15 +61,15 @@ func (s *FunctionRPCServer) Execute(args FunctionArgs, resp *FunctionResp) error
 //
 // Ignore MuxBroker. That is used to create more multiplexed streams on our
 // plugin connection and is a more advanced use case.
-type FunctionPlugin struct {
+type ExtractorPlugin struct {
 	// Impl Injection
-	Impl Function
+	Impl Extractor
 }
 
-func (p *FunctionPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	return &FunctionRPCServer{Impl: p.Impl}, nil
+func (p *ExtractorPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
+	return &ExtractorRPCServer{Impl: p.Impl}, nil
 }
 
-func (FunctionPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
-	return &FunctionRPC{client: c}, nil
+func (ExtractorPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
+	return &ExtractorRPC{client: c}, nil
 }
