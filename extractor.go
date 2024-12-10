@@ -8,7 +8,7 @@ import (
 )
 
 type ExtractorArgs struct {
-	Data   []interface{}
+	Data   string
 	Config map[string]string
 	Log    log.Logger
 }
